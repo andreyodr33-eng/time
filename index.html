@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">   
+<link rel="manifest" href="manifest.json"/>
+<title>Word builder</title>
+<style>
+ * {
+   box-sizing: border-box;
+ }      
+body{
+    font-family:Arial;
+    background:#111;
+    color:white;
+    text-align:center;
+    margin:0;
+    padding:20px;
+}
+html,body{
+   width:100%;
+   overflow-x:hidden;
+   margin:0;
+   padding:0;
+}   
+
+.container{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+    margin-top:20px;
+
+    width:100%;
+    max-width:100%;
+
+    overflow:hidden;
+}
+
+.wheelWrap{
+    position:relative;
+
+    flex:1;
+
+    min-width:110px;
+    max-width:160px;
+}
+
+.wheel{
+    width:100%;
+    height:180px;
+
+    overflow-y:scroll;
+    overflow-x:hidden;
+
+    scroll-snap-type:y mandatory;
+
+    border:2px solid #444;
+    border-radius:16px;
+
+    background:#1b1b1b;
+
+    box-sizing:border-box;
+
+    padding-top:60px;
+    padding-bottom:60px;
+
+    scrollbar-width:none;
+}
+
+.wheel::-webkit-scrollbar{
+    display:none;
+}
+
+
+.wheel:active{
+    cursor:grabbing;
+}
+
+.item{
+
+    height:60px;
+
+    min-height:60px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+    justify-content:center;
+
+    scroll-snap-align:center;
+
+    border-bottom:1px solid #333;
+
+    cursor:pointer;
+
+    user-select:none;
+
+    padding:4px;
+
+    box-sizing:border-box;
+
+    text-align:center;
+
+}
+.controls{
+    margin-top:20px;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    border-radius:10px;
+    font-size:16px;
+    cursor:pointer;
+}
+
+#result{
+    margin-top:20px;
+    font-size:26px;
+    line-height:1.6;
+}
+
+#history{
+    margin-top:30px;
+    max-width:900px;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.historyItem{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:#1b1b1b;
+    margin-bottom:10px;
+    padding:12px;
+    border-radius:10px;
+    gap:10px;
+}
+
+.historyText{
+    text-align:left;
+    line-height:1.5;
+}
+
+.deleteBtn{
+    background:#b00020;
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.en{
+    color:#00ff88;
+    font-weight:bold;
+    line-height:1.1;
+    white-space:nowrap;
+    width:100%;
+}
+
+.ru{
+    color:white;
+    font-size:14px;
+    line-height:1.1;
+    margin-top:4px;
+}
+
+
+.selector{
+    position:absolute;
+    top:50%;
+    left:0;
+    width:100%;
+    height:60px;
+    transform:translateY(-50%);
+    border:3px solid #2e5cff;
+    border-radius:12px;
+    pointer-events:none;
+    z-index:5;
+}
+.historyText{
+    cursor:pointer;
+}
+</style>
+
+<body>
+
+<h1>S +  V +  O</h1>
+<h6>word builder</h6>
+
+<div class="container">
+
+    <div class="wheelWrap">
+        <div class="selector"></div>
+        <div class="wheel" id="w1"></div>
+    </div>
+    <div class="wheelWrap">
+        <div class="selector"></div>    
+        <div class="wheel" id="w2"></div>
+   </div>
+   <div class="wheelWrap">
+       <div class="selector"></div>   
+       <div class="wheel" id="w3"></div>
+   </div>    
+</div>
+
+<div class="controls">
+<button onclick="build()">Build sentence</button>
+</div>
+
+<div id="result"></div>
+
+<h3>History</h3>
+
+<div id="history"></div>
+
+<script>
+
+"use strict";
+
+// ==========================================
+// 1. БАЗА ПРОВЕРЕННЫХ РАЗГОВОРНЫХ ПРЕДЛОЖЕНИЙ
+// ==========================================
+
+// 1. ПЕРВОЕ КОЛЕСО — НАЧАЛО ПРЕДЛОЖЕНИЯ
+
+const subjects = [
+  { id: "he", en: "He", ru: "Он" },
+  { id: "she", en: "She", ru: "Она" },
+  { id: "lets", en: "Let's", ru: "Давай" }
+];
+
+
+// 2. ВТОРОЕ КОЛЕСО — ГРУППЫ ГЛАГОЛЬНЫХ ФОРМ
+
+const actionRules = [
+  {
+    id: "drive",
+    forms: [
+      { id: "drive_cont", en: "is driving", ru: "сейчас едет" },
+      { id: "drive_simple", en: "drives", ru: "ездит обычно" },
+      { id: "drive_base", en: "drive", ru: "ехать" }
+    ]
+  },
+  {
+    id: "take",
+    forms: [
+      { id: "take_cont", en: "is taking", ru: "берёт" },
+      { id: "take_simple", en: "takes", ru: "берёт" },
+      { id: "take_base", en: "take", ru: "брать" }
+    ]
+   },
+   {
+    id: "walk",
+    forms: [
+      { id: "walk_cont", en: "is walking", ru: "идёт туда" },
+      { id: "walk_simple", en: "walks", ru: "ходит туда" },
+      { id: "walk_base", en: "walk", ru: "пойдём" }
+    ]
+  },
+  {
+    id: "eat",
+    forms: [
+      { id: "eat_cont", en: "is eating", ru: "сейчас ест" },
+      { id: "eat_simple", en: "eats", ru: "ест обычно" },
+      { id: "eat_base", en: "eat", ru: "есть" }
+    ]
+  }
+];
+
+
+// 3. ТРЕТЬЕ КОЛЕСО — ПРОДОЛЖЕНИЕ ПРЕДЛОЖЕНИЯ
+
+const objects = [
+  { id: "there", en: "there", ru: "туда" },
+  { id: "lunch", en: "lunch", ru: "обед" },
+  { id: "a photo", en: "a photo", ru: "фото" }
+];
+
+
+// 4. СВЯЗИ — ДОПУСТИМЫЕ СОЧЕТАНИЯ
+
+const combinations = [
+  {
+    subjectId: "he",
+    actionId: "drive",
+    objectId: "there",
+    forms: [
+      {
+        formId: "drive_cont",
+        context: "right now",
+        translation: "Он сейчас едет туда за рулём."
+      },
+      {
+        formId: "drive_simple",
+        context: "usually",
+        translation: "Он обычно ездит туда за рулём."
+      }
+    ]
+  },
+  {
+    subjectId: "lets",
+    actionId: "drive",
+    objectId: "there",
+    forms: [
+      {
+        formId: "drive_base",
+        context: "suggestion",
+        translation: "Давай поедем туда на машине."
+      }
+    ]
+  },
+  {
+    subjectId: "she",
+    actionId: "eat",
+    objectId: "lunch",
+    forms: [
+      {
+        formId: "eat_cont",
+        context: "right now",
+        translation: "Она сейчас обедает."
+      },
+      {
+        formId: "eat_simple",
+        context: "usually",
+        translation: "Она обычно обедает."
+      }
+    ]
+  },
+  {
+    subjectId: "she",
+    actionId: "take",
+    objectId: "a photo",
+    forms: [
+      {
+        formId: "take_cont",
+        context: "right now",
+        translation: "Она сейчас фотографирует."
+      },
+      {
+        formId: "take_simple",
+        context: "usually",
+        translation: "Она обычно фотографирует."
+      }
+    ]
+  },
+  {
+    subjectId: "lets",
+    actionId: "eat",
+    objectId: "lunch",
+    forms: [
+      {
+        formId: "eat_base",
+        context: "suggestion",
+        translation: "Давай пообедаем."
+      }
+    ]
+  }
+];
+   
+    
+// ==========================================
+// 2. СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+// ==========================================
+
+const wheel1 = document.getElementById("w1");
+const wheel2 = document.getElementById("w2");
+const wheel3 = document.getElementById("w3");
+
+const resultBox = document.getElementById("result");
+const historyBox = document.getElementById("history");
+
+
+
+
+const subjectNames = {
+  I: "Я",
+  He: "Он",
+  She: "Она",
+  We: "Мы",
+  They: "Они",
+  "Let's": "Давай"
+};
+
+const contextNames = {
+  "every day": "каждый день",
+  "right now": "прямо сейчас",
+  "yesterday": "вчера"
+  
+};
+
+let selectedSubject = "he";
+let selectedContext = "there";
+let selectedVerb = "";
+let activeExercise = null;
+let activeOptions = [];
+let exerciseQueue = [];
+let exerciseIndex = -1;
+let awaitingAnswer = false;
+
+// ==========================================
+// 3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ==========================================
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function shuffle(array) {
+  const copy = [...array];
+
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  return copy;
+}
+
+function getExercise(subjectId, objectId) {
+  return combinations.find(
+    combination =>
+      combination.subjectId === subjectId &&
+      combination.objectId === objectId
+  ) || null;
+}
+// ========================================== 
+// 4. РАБОТА КОЛЁС 
+// ==========================================
+// Колесо с конечным списком: 
+// каждый элемент выводится только один раз.
+function centerItem(wheel, item, behavior = "auto") {
+ if (!item) return;
+ const wheelRect = wheel.getBoundingClientRect();
+ const itemRect = item.getBoundingClientRect();
+const top =
+ wheel.scrollTop +
+ itemRect.top - 
+ wheelRect.top - 
+ (wheel.clientHeight - itemRect.height) / 2;
+
+ wheel._suppressUntil = Date.now() + 180;
+wheel.scrollTo({ 
+   top: Math.max(0, Math.min(
+   top,
+   wheel.scrollHeight - wheel.clientHeight
+ )), 
+ behavior
+ }); 
+}
+function renderWheel(wheel, entries, selectedId, onChange) {
+   wheel.innerHTML = "";
+   wheel._entries = entries;
+   wheel._onChange = onChange;
+   wheel._lastId = selectedId;
+
+   entries.forEach(entry => { 
+   const item = document.createElement("div");
+   item.className = "item";
+   item.dataset.id = entry.id;
+
+ item.innerHTML = `
+   <div class="en">${escapeHTML(entry.en)}</div>
+   <div class="ru">${escapeHTML(entry.ru)}</div>
+ `;
+
+ item.addEventListener("click", () => {
+   centerItem(wheel, item, "smooth");
+ });
+
+ wheel.appendChild(item);
+});
+const selectedItem = [...wheel.querySelectorAll(".item")]
+ .find(item => item.dataset.id === selectedId);
+if (selectedItem) { 
+   centerItem(wheel, selectedItem);
+ }
+// После создания списка проверяем ближайший элемент.
+ requestAnimationFrame(() => {
+ updateWheelSelection(wheel);
+  });
+ }
+function updateWheelSelection(wheel) { 
+   const items = [...wheel.querySelectorAll(".item")];
+   if (!items.length || !wheel._entries) return;
+   const wheelRect = wheel.getBoundingClientRect();
+   const centerY = wheelRect.top + wheel.clientHeight / 2;
+
+   let nearest = items[0];
+   let nearestDistance = Infinity;
+
+   items.forEach(item => { 
+   const rect = item.getBoundingClientRect();
+   const distance = Math.abs( 
+     rect.top + rect.height / 2 - centerY 
+  );
+   if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = item;
+ }
+});
+const id = nearest.dataset.id;
+if (id !== wheel._lastId) { wheel._lastId = id;
+ if (typeof wheel._onChange === "function") {
+   wheel._onChange(id);
+   }
+ } 
+}
+function installWheelEvents(wheel) { 
+  let scrollTimer;
+  wheel.addEventListener("scroll", () => { 
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+    if (Date.now() < (wheel._suppressUntil || 0)) {
+     return;
+   }
+
+   updateWheelSelection(wheel);
+
+   const items = [...wheel.querySelectorAll(".item")];
+
+   if (!items.length) return;
+
+   const wheelRect = wheel.getBoundingClientRect();
+   const centerY = wheelRect.top + wheel.clientHeight / 2;
+
+   let nearest = items[0];
+   let nearestDistance = Infinity;
+
+   items.forEach(item => {
+     const rect = item.getBoundingClientRect();
+     const distance = Math.abs(
+       rect.top + rect.height / 2 - centerY
+     );
+
+     if (distance < nearestDistance) {
+       nearestDistance = distance;
+       nearest = item;
+     }
+   });
+
+   centerItem(wheel, nearest, "smooth");
+ }, 100);
+}); 
+}
+
+// ==========================================
+// 5. ОБНОВЛЕНИЕ ЗАДАНИЯ
+// ==========================================
+
+function updateExercise() {
+  if (!activeExercise) return;
+
+  const actionRule = actionRules.find(
+    rule => rule.id === activeExercise.actionId
+  );
+
+  if (!actionRule) {
+    resultBox.textContent =
+      "Группа глагольных форм не найдена.";
+    return;
+  }
+
+  activeOptions = actionRule.forms.map(form => ({
+    ...form
+  }));
+
+  // По умолчанию ставим форму,
+  // отличную от правильного ответа.
+  const correctFormId = activeExercise.forms[0].formId;
+
+  const initialOption =
+    activeOptions.find(form => form.id !== correctFormId) ||
+    activeOptions[0];
+
+  selectedVerb = initialOption.id;
+
+  renderWheel(
+    wheel2,
+    activeOptions,
+    selectedVerb,
+    id => {
+      selectedVerb = id;
+    }
+  );
+}
+
+  function selectSubject(id) {
+
+  if (id === selectedSubject) return;
+
+  selectedSubject = id;
+
+  const availableObjects = getAvailableContexts();
+
+  if (!availableObjects.some(item => item.id === selectedContext)) {
+    selectedContext = availableObjects[0]?.id ?? "";
+  }
+
+  renderWheel(
+    wheel3,
+    availableObjects,
+    selectedContext,
+    selectContext
+  );
+
+  updateExercise();
+}
+
+ 
+
+function getAvailableContexts() { 
+const available = combinations.filter(
+ combination => combination.subjectId === selectedSubject
+ );
+const uniqueObjects = [ 
+...new Set(available.map(combination => combination.objectId)) 
+];
+return uniqueObjects.map(id => { 
+  const object = objects.find(item => item.id === id);
+return {
+  id: object.id,
+  en: object.en,
+  ru: object.ru
+};
+}); 
+}
+
+function selectContext(id) {
+  if (!getExercise(selectedSubject, id)) return;
+  if (id === selectedContext) return;
+
+  selectedContext = id;
+  updateExercise();
+}
+
+// ==========================================
+// 6. СБОРКА И ПРОВЕРКА ПРЕДЛОЖЕНИЯ
+// ==========================================
+
+function build() {
+
+ // Режим 1: подготавливаем новое упражнение. 
+ if (!awaitingAnswer) {
+// Создаём очередь, если она ещё не создана.
+ if (exerciseQueue.length === 0) {
+  combinations.forEach(combination => {
+    // Для каждого сочетания выбираем одну форму.
+    const form = combination.forms[
+      Math.floor(Math.random() * combination.forms.length)
+    ];
+
+    exerciseQueue.push({
+      ...combination,
+      forms: [form]
+    });
+  });
+
+  // Перемешиваем порядок упражнений.
+  exerciseQueue.sort(() => Math.random() - 0.5);
+}
+
+// Переходим к следующему упражнению.
+exerciseIndex++;
+
+// После последнего задания начинаем сначала.
+if (exerciseIndex >= exerciseQueue.length) {
+  exerciseIndex = 0;
+}
+
+activeExercise = exerciseQueue[exerciseIndex];
+
+selectedSubject = activeExercise.subjectId;
+selectedContext = activeExercise.objectId;
+
+const subject = subjects.find(
+  item => item.id === selectedSubject
+);
+
+const object = objects.find(
+  item => item.id === selectedContext
+);
+
+// Устанавливаем первое колесо.
+renderWheel(
+  wheel1,
+  subject ? [subject] : [],
+  selectedSubject,
+  () => {}
+);
+
+// Устанавливаем третье колесо.
+renderWheel(
+  wheel3,
+  object ? [object] : [],
+  selectedContext,
+  () => {}
+);
+
+// Подготавливаем формы глагола.
+updateExercise();
+
+// Показываем условие задания.
+const context = activeExercise.forms[0].context;
+
+const contextHints = {
+  "right now": "прямо сейчас",
+  "usually": "обычно",
+  "suggestion": "предложение"
+};
+
+resultBox.innerHTML = `
+  <div style="font-size:18px;margin-bottom:8px">
+    Условие: ${escapeHTML(context || "")}
+    (${escapeHTML(contextHints[context] || "")})
+  </div>
+  <div>
+    Выберите форму глагола и нажмите
+    Build sentence ещё раз.
+  </div>
+`;
+
+awaitingAnswer = true;
+
+return;
+}
+// Режим 2: проверяем выбранный ответ. 
+const subject = subjects.find( 
+item => item.id === activeExercise.subjectId
+ );
+const object = objects.find(
+ item => item.id === activeExercise.objectId
+ );
+const chosen = activeOptions.find(
+ option => option.id === selectedVerb 
+);
+const correctForm = activeExercise.forms[0];
+const actionRule = actionRules.find( 
+rule => rule.id === activeExercise.actionId 
+);
+const correctVerb = actionRule?.forms.find(
+ form => form.id === correctForm.formId
+ );
+if (!subject || !object || !chosen || !correctVerb) {
+ resultBox.textContent = "Не удалось проверить ответ.";
+ awaitingAnswer = false;
+
+ return;
+ }
+// Находим полную запись, чтобы получить перевод 
+// именно выбранной формы глагола. 
+ const combination = combinations.find(item => 
+ item.subjectId === activeExercise.subjectId && 
+ item.actionId === activeExercise.actionId && 
+ item.objectId === activeExercise.objectId
+ );
+const chosenDetails = combination?.forms.find( 
+form => form.formId === chosen.id 
+);
+const correctDetails = combination?.forms.find(
+ form => form.formId === correctForm.formId
+ );
+const sentence = 
+ `${subject.en} ${chosen.en} ${object.en}`;
+const correctSentence =
+ `${subject.en} ${correctVerb.en} ${object.en}`;
+
+  const isCorrect = chosen.id === correctForm.formId;
+
+  const chosenTranslation = chosenDetails?.translation || "";
+  const correctTranslation = correctDetails?.translation || "";
+
+resultBox.innerHTML = `
+  <div style="color:${isCorrect ? '#00ff88' : '#ff7070'}">
+    ${isCorrect ? "✓ Correct!" : "✗ Try again"}
+  </div>
+
+  ${
+    isCorrect
+      ? `<div>${escapeHTML(sentence)}</div>
+         <div style="font-size:17px;color:#bbb">
+           ${escapeHTML(correctTranslation)}
+         </div>`
+      : `<div style="margin-top:6px">
+           Выбрано: ${escapeHTML(sentence)}
+         </div>
+         <div style="font-size:18px;margin-top:10px">
+           Правильно: ${escapeHTML(correctSentence)}
+         </div>
+         <div style="font-size:17px;color:#bbb">
+           ${escapeHTML(correctTranslation)}
+         </div>`
+  }
+`;
+
+
+addHistory({ 
+  sentence,
+  translation: chosenTranslation,
+  correctSentence,
+  isCorrect,
+  date: new Date().toLocaleString()
+ });
+// Следующее нажатие подготовит новое упражнение.
+ awaitingAnswer = false;
+
+ }
+ window.build = build;
+   
+  
+ 
+   
+
+// ==========================================
+// 7. ИСТОРИЯ РЕЗУЛЬТАТОВ
+// ==========================================
+
+const HISTORY_KEY = "wordBuilderHistoryV1";
+
+function readHistory() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(HISTORY_KEY) || "[]"
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(items) {
+  try {
+    localStorage.setItem(
+      HISTORY_KEY,
+      JSON.stringify(items)
+    );
+  } catch (error) {
+    console.warn("История не сохранена.", error);
+  }
+}
+
+function speakText(text){
+  
+    return new Promise(resolve=>{
+
+        const utter =
+        new SpeechSynthesisUtterance(text);
+
+        utter.lang = "en-US";
+        utter.rate = 0.8;
+        
+        const voices =
+        speechSynthesis.getVoices();
+
+        const englishVoice =
+            
+             voices.find(v =>
+                v.name === "Karen"
+           )
+
+           ||
+
+            voices.find(v =>
+                v.name === "Samantha"
+            )
+
+            ||
+
+            voices.find(v =>
+                v.name === "Daniel"
+            )
+
+            ||
+
+            voices.find(v =>
+                v.lang.includes("en")
+            );
+
+        if(englishVoice){
+
+            utter.voice =
+            englishVoice;
+
+        }
+
+        utter.onend = ()=>
+            resolve();
+
+        speechSynthesis.speak(
+            utter
+        );
+
+    });
+
+}
+
+function addHistory(entry) {
+  const items = readHistory();
+
+  items.unshift(entry);
+
+  // Ограничиваем историю последними 100 результатами.
+  saveHistory(items.slice(0, 100));
+  renderHistory();
+}
+
+function renderHistory() {
+  const items = readHistory();
+
+  historyBox.innerHTML = "";
+
+  if (!items.length) {
+    historyBox.innerHTML =
+      '<p style="color:#888">История пока пуста.</p>';
+    return;
+  }
+
+  items.forEach((entry, index) => {
+    const row = document.createElement("div");
+    row.className = "historyItem";
+
+    row.innerHTML = `
+      <div class="historyText">
+        <div style="display:flex;align-items:center;gap:8px">
+        <button class="speakBtn" type="button" title="Listen"
+        style="background:none;border:none;padding:0;cursor:pointer;font-size:18px">🔊</button>
+        <div class="en">${escapeHTML(entry.sentence)}</div>
+      </div>
+      <div class="ru">${escapeHTML(entry.translation)}</div>
+        <div style="color:${entry.isCorrect ? '#00ff88' : '#ff7070'}">
+          ${entry.isCorrect ? "✓ Correct" : "✗ Incorrect"}
+        </div>
+        <div style="font-size:11px;color:#888">
+          ${escapeHTML(entry.date)}
+        </div>
+      </div>
+      <button class="deleteBtn" type="button">Delete</button>
+    `;
+    row.querySelector(".speakBtn").addEventListener(
+       "click",
+       () => {
+          speechSynthesis.cancel();
+          speakText(entry.sentence);
+    }
+  );
+    row.querySelector(".deleteBtn").addEventListener(
+      "click",
+      () => {
+        const updated = readHistory();
+        updated.splice(index, 1);
+        saveHistory(updated);
+        renderHistory();
+      }
+    );
+
+    historyBox.appendChild(row);
+  });
+}
+
+// ==========================================
+// 8. ЗАПУСК ПРИЛОЖЕНИЯ
+// ==========================================
+
+installWheelEvents(wheel1);
+installWheelEvents(wheel2);
+installWheelEvents(wheel3);
+
+renderWheel(
+  wheel1,
+  subjects.map(subject => ({
+    id: subject.id,
+    en: subject.en,
+    ru: subject.ru
+  })),
+  selectedSubject,
+  selectSubject
+);
+
+renderWheel(
+  wheel3,
+  getAvailableContexts(),
+  selectedContext,
+  selectContext
+);
+
+updateExercise();
+renderHistory();
+</script>
+</body>
+</html>
