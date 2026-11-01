@@ -576,15 +576,12 @@ function updateExercise() {
     ...form
   }));
 
-  // По умолчанию ставим форму,
-  // отличную от правильного ответа.
-  const correctFormId = activeExercise.forms[0].formId;
+  // Случайным образом выбираем начальную форму глагола.
+const randomIndex = Math.floor(
+  Math.random() * activeOptions.length
+);
 
-  const initialOption =
-    activeOptions.find(form => form.id !== correctFormId) ||
-    activeOptions[0];
-
-  selectedVerb = initialOption.id;
+selectedVerb = activeOptions[randomIndex].id;
 
   renderWheel(
     wheel2,
