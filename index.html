@@ -749,7 +749,12 @@ resultBox.innerHTML = `
     Build sentence ещё раз.
   </div>
 `;
-
+ if (isCorrect) {
+    speechSynthesis.cancel();
+    speakText(correctSentence);
+ } else {
+    playErrorSound();
+ }
 awaitingAnswer = true;
 
 return;
