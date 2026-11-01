@@ -644,6 +644,25 @@ function selectContext(id) {
   selectedContext = id;
   updateExercise();
 }
+// Озвучка неправильного ответа.
+
+ function playErrorSound() {
+      const audio = new AudioContext();
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 660;
+
+      gain.gain.value = 0.25;
+
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+
+      oscillator.start();
+      oscillator.stop(audio.currentTime + 0.5);
+
+      oscillator.onended = () => audio.close();
+ }
 
 // ==========================================
 // 6. СБОРКА И ПРОВЕРКА ПРЕДЛОЖЕНИЯ
