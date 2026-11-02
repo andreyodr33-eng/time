@@ -230,6 +230,7 @@ button{
 // 1. ПЕРВОЕ КОЛЕСО — НАЧАЛО ПРЕДЛОЖЕНИЯ
 
 const subjects = [
+  { id: "i", en: "I", ru: "Я" },
   { id: "he", en: "He", ru: "Он" },
   { id: "she", en: "She", ru: "Она" },
   { id: "lets", en: "Let's", ru: "Давай" }
@@ -264,6 +265,14 @@ const actionRules = [
     ]
   },
   {
+  id: "work",
+  forms: [
+    { id: "work_simple", en: "work", ru: "работаю" },
+    { id: "worked_simple", en: "worked", ru: "работал" },
+    { id: "will_work_simple", en: "will work", ru: "буду работать" }
+  ]
+  },
+  {
     id: "eat",
     forms: [
       { id: "eat_cont", en: "is eating", ru: "сейчас ест" },
@@ -279,13 +288,54 @@ const actionRules = [
 const objects = [
   { id: "there", en: "there", ru: "туда" },
   { id: "lunch", en: "lunch", ru: "обед" },
-  { id: "a photo", en: "a photo", ru: "фото" }
+  { id: "a photo", en: "a photo", ru: "фото" },
+  { id: "every_day", en: "every day", ru: "каждый день" },
+  { id: "yesterday", en: "yesterday", ru: "вчера" },
+  { id: "tomorrow", en: "tomorrow", ru: "завтра" }
 ];
 
 
 // 4. СВЯЗИ — ДОПУСТИМЫЕ СОЧЕТАНИЯ
 
 const combinations = [
+   
+  {
+    subjectId: "i",
+    actionId: "work",
+    objectId: "every_day",
+    forms: [
+      {
+        formId: "work_simple",
+        context: "Present",
+        translation: "Я работаю каждый день."
+      }
+    ]
+  },
+  {
+    subjectId: "i",
+    actionId: "work",
+    objectId: "yesterday",
+    forms: [
+      {
+        formId: "worked_simple",
+        context: "Past",
+        translation: "Я работал вчера."
+      }
+    ]
+  },
+  {
+    subjectId: "i",
+    actionId: "work",
+    objectId: "tomorrow",
+    forms: [
+      {
+        formId: "will_work_simple",
+        context: "Future",
+        translation: "Я буду работать завтра."
+      }
+    ]
+  },
+
   {
     subjectId: "he",
     actionId: "drive",
